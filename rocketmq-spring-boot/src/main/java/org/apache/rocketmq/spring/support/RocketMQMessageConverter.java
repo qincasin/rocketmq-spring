@@ -30,6 +30,7 @@ import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.util.ClassUtils;
 
 /**
+ * 初始化 fasterjson or jackson 格式的 的解析器
  * @see MessageConverter
  * @see CompositeMessageConverter
  */
@@ -66,6 +67,7 @@ public class RocketMQMessageConverter {
         if (FASTJSON_PRESENT) {
             try {
                 messageConverters.add(
+                        //反射获取
                     (MessageConverter)ClassUtils.forName(
                         "com.alibaba.fastjson.support.spring.messaging.MappingFastJsonMessageConverter",
                         ClassUtils.getDefaultClassLoader()).newInstance());
@@ -76,6 +78,10 @@ public class RocketMQMessageConverter {
         messageConverter = new CompositeMessageConverter(messageConverters);
     }
 
+    /**
+     * 获取当前的message converter
+     * @return
+     */
     public MessageConverter getMessageConverter() {
         return messageConverter;
     }
