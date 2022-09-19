@@ -62,6 +62,9 @@ import javax.annotation.PostConstruct;
 public class RocketMQAutoConfiguration implements ApplicationContextAware {
     private static final Logger log = LoggerFactory.getLogger(RocketMQAutoConfiguration.class);
 
+    /**
+     * rocketMQTemplate
+     */
     public static final String ROCKETMQ_TEMPLATE_DEFAULT_GLOBAL_NAME =
         "rocketMQTemplate";
     public static final String PRODUCER_BEAN_NAME = "defaultMQProducer";
@@ -103,6 +106,7 @@ public class RocketMQAutoConfiguration implements ApplicationContextAware {
         boolean isEnableMsgTrace = rocketMQProperties.getProducer().isEnableMsgTrace();
         String customizedTraceTopic = rocketMQProperties.getProducer().getCustomizedTraceTopic();
 
+        //创建默认的mq生产者
         DefaultMQProducer producer = RocketMQUtil.createDefaultMQProducer(groupName, ak, sk, isEnableMsgTrace, customizedTraceTopic);
 
         producer.setNamesrvAddr(nameServer);
