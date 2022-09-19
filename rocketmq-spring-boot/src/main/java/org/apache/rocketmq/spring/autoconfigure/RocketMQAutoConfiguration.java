@@ -55,6 +55,7 @@ import javax.annotation.PostConstruct;
 @EnableConfigurationProperties(RocketMQProperties.class)
 @ConditionalOnClass({MQAdmin.class})
 @ConditionalOnProperty(prefix = "rocketmq", value = "name-server", matchIfMissing = true)
+//这里通过import 方式 ，去加载 其余的一些 配置
 @Import({MessageConverterConfiguration.class, ListenerContainerConfiguration.class, ExtProducerResetConfiguration.class,
         ExtConsumerResetConfiguration.class, RocketMQTransactionConfiguration.class, RocketMQListenerConfiguration.class})
 @AutoConfigureAfter({MessageConverterConfiguration.class})
@@ -89,6 +90,11 @@ public class RocketMQAutoConfiguration implements ApplicationContextAware {
         }
     }
 
+    /**
+     * 初始化 默认的 mq producer
+     * @param rocketMQProperties
+     * @return
+     */
     @Bean(PRODUCER_BEAN_NAME)
     @ConditionalOnMissingBean(DefaultMQProducer.class)
     @ConditionalOnProperty(prefix = "rocketmq", value = {"name-server", "producer.group"})
@@ -126,6 +132,12 @@ public class RocketMQAutoConfiguration implements ApplicationContextAware {
         return producer;
     }
 
+    /**
+     * 初始化 默认的 lite pull consumer
+     * @param rocketMQProperties
+     * @return
+     * @throws MQClientException
+     */
     @Bean(CONSUMER_BEAN_NAME)
     @ConditionalOnMissingBean(DefaultLitePullConsumer.class)
     @ConditionalOnProperty(prefix = "rocketmq", value = {"name-server", "pull-consumer.group", "pull-consumer.topic"})
@@ -158,8 +170,13 @@ public class RocketMQAutoConfiguration implements ApplicationContextAware {
         return litePullConsumer;
     }
 
+    /**
+     * destroy 时执行
+     * @param rocketMQMessageConverter
+     * @return
+     */
     @Bean(destroyMethod = "destroy")
-    @Conditional(ProducerOrConsumerPropertyCondition.class)
+    @Conditional(ProducerOrConsumerPropertyCondition.class)//在这里作用到
     @ConditionalOnMissingBean(name = ROCKETMQ_TEMPLATE_DEFAULT_GLOBAL_NAME)
     public RocketMQTemplate rocketMQTemplate(RocketMQMessageConverter rocketMQMessageConverter) {
         RocketMQTemplate rocketMQTemplate = new RocketMQTemplate();
@@ -173,6 +190,9 @@ public class RocketMQAutoConfiguration implements ApplicationContextAware {
         return rocketMQTemplate;
     }
 
+    /**
+     * 嵌套condition 使用方式 ，具体可以参考 AnyNestedCondition
+     */
     static class ProducerOrConsumerPropertyCondition extends AnyNestedCondition {
 
         public ProducerOrConsumerPropertyCondition() {
