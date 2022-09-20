@@ -55,6 +55,12 @@ public class ListenerContainerConfiguration implements ApplicationContextAware {
 
     private RocketMQMessageConverter rocketMQMessageConverter;
 
+    /**
+     * 构造器初始化 设置一些配置
+     * @param rocketMQMessageConverter
+     * @param environment
+     * @param rocketMQProperties
+     */
     public ListenerContainerConfiguration(RocketMQMessageConverter rocketMQMessageConverter,
         ConfigurableEnvironment environment, RocketMQProperties rocketMQProperties) {
         this.rocketMQMessageConverter = rocketMQMessageConverter;
@@ -62,11 +68,22 @@ public class ListenerContainerConfiguration implements ApplicationContextAware {
         this.rocketMQProperties = rocketMQProperties;
     }
 
+    /**
+     * set 上下文
+     * @param applicationContext the ApplicationContext object to be used by this object
+     * @throws BeansException
+     */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = (ConfigurableApplicationContext) applicationContext;
     }
 
+    /**
+     * 注册rocketmq 的 容器
+     * @param beanName
+     * @param bean
+     * @param annotation
+     */
     public void registerContainer(String beanName, Object bean, RocketMQMessageListener annotation) {
         Class<?> clazz = AopProxyUtils.ultimateTargetClass(bean);
 
@@ -78,9 +95,12 @@ public class ListenerContainerConfiguration implements ApplicationContextAware {
             throw new IllegalStateException(clazz + " is not instance of " + RocketMQListener.class.getName() + " or " + RocketMQReplyListener.class.getName());
         }
 
+        //解析和获取 消费者group
         String consumerGroup = this.environment.resolvePlaceholders(annotation.consumerGroup());
+        //解析topic
         String topic = this.environment.resolvePlaceholders(annotation.topic());
 
+        //监听是否开启，如果没有开启，下面直接就出去了。，这里一般都是true
         boolean listenerEnabled =
             (boolean) rocketMQProperties.getPushConsumer().getListeners().getOrDefault(consumerGroup, Collections.EMPTY_MAP)
                 .getOrDefault(topic, true);
@@ -91,14 +111,20 @@ public class ListenerContainerConfiguration implements ApplicationContextAware {
                 consumerGroup, topic);
             return;
         }
+        //校验注解中的一些配置
+        // 如果 消费模型是 顺序的，并且是广播的模式 ，直接就报错   BROADCASTING 不支持 顺序消费
         validate(annotation);
 
+        //containerBeanName 生成方式，DefaultRocketMQListenerContainer_数字
+        // DefaultRocketMQListenerContainer_1,DefaultRocketMQListenerContainer_2 .....
         String containerBeanName = String.format("%s_%s", DefaultRocketMQListenerContainer.class.getName(),
             counter.incrementAndGet());
         GenericApplicationContext genericApplicationContext = (GenericApplicationContext) applicationContext;
 
+        //注册了一个bean
         genericApplicationContext.registerBean(containerBeanName, DefaultRocketMQListenerContainer.class,
             () -> createRocketMQListenerContainer(containerBeanName, bean, annotation));
+        //注册完之后再次获取下，如果 这个容器 没有运行，在这里进行启动这个容器
         DefaultRocketMQListenerContainer container = genericApplicationContext.getBean(containerBeanName,
             DefaultRocketMQListenerContainer.class);
         if (!container.isRunning()) {
@@ -113,14 +139,24 @@ public class ListenerContainerConfiguration implements ApplicationContextAware {
         log.info("Register the listener to container, listenerBeanName:{}, containerBeanName:{}", beanName, containerBeanName);
     }
 
+    /**
+     * 注册 RocketMQListener容器 的过程
+     * @param name
+     * @param bean
+     * @param annotation
+     * @return
+     */
     private DefaultRocketMQListenerContainer createRocketMQListenerContainer(String name, Object bean,
         RocketMQMessageListener annotation) {
         DefaultRocketMQListenerContainer container = new DefaultRocketMQListenerContainer();
 
+        //设置 监听的一些信息
         container.setRocketMQMessageListener(annotation);
 
+        //解析nameServer
         String nameServer = environment.resolvePlaceholders(annotation.nameServer());
         nameServer = StringUtils.isEmpty(nameServer) ? rocketMQProperties.getNameServer() : nameServer;
+        //解析accessChannel 默认是 ${rocketmq.access-channel:} ，默认是空
         String accessChannel = environment.resolvePlaceholders(annotation.accessChannel());
         container.setNameServer(nameServer);
         if (!StringUtils.isEmpty(accessChannel)) {
@@ -133,6 +169,8 @@ public class ListenerContainerConfiguration implements ApplicationContextAware {
         }
         container.setConsumerGroup(environment.resolvePlaceholders(annotation.consumerGroup()));
         container.setTlsEnable(environment.resolvePlaceholders(annotation.tlsEnable()));
+
+        //判断是 延迟队列监听还是 正常的消费队列，并且进行设置
         if (RocketMQListener.class.isAssignableFrom(bean.getClass())) {
             container.setRocketMQListener((RocketMQListener) bean);
         } else if (RocketMQReplyListener.class.isAssignableFrom(bean.getClass())) {
@@ -147,6 +185,10 @@ public class ListenerContainerConfiguration implements ApplicationContextAware {
         return container;
     }
 
+    /**
+     * 如果 消费模型是 顺序的，并且是广播的模式 ，直接就报错   BROADCASTING 不支持 顺序消费
+     * @param annotation
+     */
     private void validate(RocketMQMessageListener annotation) {
         if (annotation.consumeMode() == ConsumeMode.ORDERLY &&
             annotation.messageModel() == MessageModel.BROADCASTING) {
