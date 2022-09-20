@@ -418,6 +418,7 @@ public class DefaultRocketMQListenerContainer implements InitializingBean,
                 log.debug("received msg: {}", messageExt);
                 try {
                     long now = System.currentTimeMillis();
+                    //处理消息
                     handleMessage(messageExt);
                     long costTime = System.currentTimeMillis() - now;
                     log.debug("consume {} cost: {} ms", messageExt.getMsgId(), costTime);
@@ -441,6 +442,7 @@ public class DefaultRocketMQListenerContainer implements InitializingBean,
                 log.debug("received msg: {}", messageExt);
                 try {
                     long now = System.currentTimeMillis();
+                    //处理消息
                     handleMessage(messageExt);
                     long costTime = System.currentTimeMillis() - now;
                     log.debug("consume {} cost: {} ms", messageExt.getMsgId(), costTime);
@@ -458,14 +460,18 @@ public class DefaultRocketMQListenerContainer implements InitializingBean,
     private void handleMessage(
         MessageExt messageExt) throws MQClientException, RemotingException, InterruptedException {
         if (rocketMQListener != null) {
+            //正常的消息消费
             rocketMQListener.onMessage(doConvertMessage(messageExt));
         } else if (rocketMQReplyListener != null) {
+            //延迟队列中的消费
             Object replyContent = rocketMQReplyListener.onMessage(doConvertMessage(messageExt));
             Message<?> message = MessageBuilder.withPayload(replyContent).build();
 
+            //重新创建延迟消息
             org.apache.rocketmq.common.message.Message replyMessage = MessageUtil.createReplyMessage(messageExt, convertToBytes(message));
             DefaultMQProducer producer = consumer.getDefaultMQPushConsumerImpl().getmQClientFactory().getDefaultMQProducer();
             producer.setSendMsgTimeout(replyTimeout);
+            //再次发送过去
             producer.send(replyMessage, new SendCallback() {
                 @Override public void onSuccess(SendResult sendResult) {
                     if (sendResult.getSendStatus() != SendStatus.SEND_OK) {
@@ -525,10 +531,15 @@ public class DefaultRocketMQListenerContainer implements InitializingBean,
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 真正的处理message消息的地方
+     */
     private Object doConvertMessage(MessageExt messageExt) {
+        //先判断 messageType 类型，如果 是 MessageExt  类型 或者 org.apache.rocketmq.common.message.Message 类型，则直接 return
         if (Objects.equals(messageType, MessageExt.class) || Objects.equals(messageType, org.apache.rocketmq.common.message.Message.class)) {
             return messageExt;
         } else {
+            //非上面说的那些类型
             String str = new String(messageExt.getBody(), Charset.forName(charset));
             if (Objects.equals(messageType, String.class)) {
                 return str;
@@ -537,6 +548,7 @@ public class DefaultRocketMQListenerContainer implements InitializingBean,
                 try {
                     if (messageType instanceof Class) {
                         //if the messageType has not Generic Parameter
+                        //如果 messageType 没有通用参数
                         return this.getMessageConverter().fromMessage(MessageBuilder.withPayload(str).build(), (Class<?>) messageType);
                     } else {
                         //if the messageType has Generic Parameter, then use SmartMessageConverter#fromMessage with third parameter "conversionHint".
@@ -672,9 +684,11 @@ public class DefaultRocketMQListenerContainer implements InitializingBean,
 
         switch (consumeMode) {
             case ORDERLY:
+                //顺序消费 处理方式
                 consumer.setMessageListener(new DefaultMessageListenerOrderly());
                 break;
             case CONCURRENTLY:
+                //并发消费
                 consumer.setMessageListener(new DefaultMessageListenerConcurrently());
                 break;
             default:

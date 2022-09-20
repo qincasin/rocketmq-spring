@@ -52,6 +52,7 @@ public class RocketMQMessageListenerBeanPostProcessor implements ApplicationCont
         if (ann != null) {
             RocketMQMessageListener enhance = enhance(targetClass, ann);
             if (listenerContainerConfiguration != null) {
+                //增强注册
                 listenerContainerConfiguration.registerContainer(beanName, bean, enhance);
             }
         }

@@ -91,6 +91,7 @@ public class ExtConsumerResetConfiguration implements ApplicationContextAware, S
         validate(annotation, genericApplicationContext);
 
         DefaultLitePullConsumer consumer = null;
+        //启动
         try {
             consumer = createConsumer(annotation);
             consumer.start();

@@ -37,6 +37,9 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * 初始化 RocketMQTransactionConfiguration 事务配置
+ */
 @Configuration
 public class RocketMQTransactionConfiguration implements ApplicationContextAware, SmartInitializingSingleton {
 

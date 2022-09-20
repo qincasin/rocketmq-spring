@@ -32,6 +32,11 @@ import org.springframework.stereotype.Component;
  * two methods for process callback events after the txProducer sends a transactional message.
  * <p>Note: The annotation is used only on RocketMQ client producer side, it can not be used
  * on consumer side.
+ *
+ * 此注解用于实现接口 org.apache.rocketmq.spring.core.RocketMQLocalTransactionListener 的类，
+ * 稍后将转换为 org.apache.rocketmq.client.producer.TransactionListener。
+ * 在 txProducer 发送事务消息后，该类实现了两个处理回调事件的方法。
+ * 注意：注解只在RocketMQ客户端生产者端使用，消费者端不能使用。
  */
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)

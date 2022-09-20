@@ -40,6 +40,9 @@ import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.util.StringUtils;
 
+/**
+ * @see <a href="https://juejin.cn/post/6844903984931700749">...</a>
+ */
 @Configuration
 public class ExtProducerResetConfiguration implements ApplicationContextAware, SmartInitializingSingleton {
     private static final Logger log = LoggerFactory.getLogger(ExtProducerResetConfiguration.class);
@@ -82,9 +85,11 @@ public class ExtProducerResetConfiguration implements ApplicationContextAware, S
 
         ExtRocketMQTemplateConfiguration annotation = clazz.getAnnotation(ExtRocketMQTemplateConfiguration.class);
         GenericApplicationContext genericApplicationContext = (GenericApplicationContext) applicationContext;
+        //校验注解指定的NameServer地址是否与全局的相同，相同则抛出BeanDefinitionValidationException异常
         validate(annotation, genericApplicationContext);
 
         DefaultMQProducer mqProducer = createProducer(annotation);
+        //启动
         try {
             mqProducer.start();
         } catch (MQClientException e) {
@@ -133,6 +138,11 @@ public class ExtProducerResetConfiguration implements ApplicationContextAware, S
         return producer;
     }
 
+    /**
+     * 校验注解指定的NameServer地址是否与全局的相同，相同则抛出BeanDefinitionValidationException异常
+     * @param annotation
+     * @param genericApplicationContext
+     */
     private void validate(ExtRocketMQTemplateConfiguration annotation,
         GenericApplicationContext genericApplicationContext) {
         if (genericApplicationContext.isBeanNameInUse(annotation.value())) {
